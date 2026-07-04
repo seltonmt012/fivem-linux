@@ -38,6 +38,29 @@ SWITCH_FILE="${XDG_RUNTIME_DIR}/fivem_switchcl_url"
 cd "$RELEASE_DIR" || exit 1
 CONNECT_ARG="$1"
 
+# --- pre-launch cleanup: kill stale FiveM/wine processes so every start is clean ---
+# (Leftover crashed instances leak X11 connections and make the next launch hang.)
+for pat in 'release\\FiveM.exe' 'FiveM_GTAProcess' 'FiveM_ROSLauncher' 'FiveM_ROSService' \
+           'FiveM_DumpServer' 'GTA5.exe' 'b3[0-9][0-9][0-9]_GameProc' '-switchcl' \
+           'Launcher.exe' 'RockstarService.exe' 'SocialClubHelper' 'umu-fivem'; do
+  pkill -9 -f "$pat" 2>/dev/null
+done
+sleep 1
+rm -f "$WINEPREFIX/drive_c/Program Files (x86)/Steam/steamclient64.dll" \
+      "$WINEPREFIX/drive_c/Program Files (x86)/Steam/steamclient.dll" 2>/dev/null
+
+# --- auto-dismiss the "Insecure mode" dialog so we reach the menu without a click ---
+if command -v xdotool >/dev/null 2>&1; then
+  (
+    for _ in $(seq 1 90); do
+      iw=$(xdotool search --name 'Insecure' 2>/dev/null | head -1)
+      [ -n "$iw" ] && xdotool key --window "$iw" Return 2>/dev/null
+      sleep 2
+    done
+  ) >/dev/null 2>&1 &
+  DISMISS=$!
+fi
+
 while true; do
   rm -f "$SWITCH_FILE"
   # FiveM relaunches itself with `-switchcl:<h> "fivem://connect/<srv>"` for a game-build
@@ -62,3 +85,4 @@ while true; do
   fi
   break
 done
+[ -n "${DISMISS:-}" ] && kill "$DISMISS" 2>/dev/null
