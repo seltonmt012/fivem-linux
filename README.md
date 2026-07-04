@@ -9,6 +9,27 @@ Kein Dual-Boot, keine VM. Der FiveM-Client wird selbst kompiliert (in der GitHub
 
 ---
 
+## 🚀 Schnellstart (ein Befehl)
+
+Der Installer macht **alles automatisch** — Client in der GitHub-Cloud kompilieren **und** das komplette Linux-Setup. Du musst dich nur **selbst einloggen** (das kann kein Skript für dich): einmalig bei der GitHub CLI (`gh auth login`) für den Cloud-Build, und später im Spiel bei **Rockstar** & **Cfx.re**.
+
+```bash
+git clone https://github.com/seltonmt012/fivem-linux.git
+cd fivem-linux
+chmod +x scripts/*.sh
+
+gh auth login          # falls noch nicht eingeloggt
+./scripts/install.sh   # Build (~50 Min, GitHub Cloud) + komplettes Setup
+```
+
+Was `install.sh` erledigt: `Gogsi/fivem` forken · Branch `wine-win10` + Workflow anlegen · Build in GitHub Actions starten und auf Fertigstellung warten · Artefakt herunterladen · umu-launcher & **GE-Proton automatisch** laden · Pfade (GTA V, Steam-Prefix) **auto-detecten** · `CitizenFX.ini` schreiben · Wine-Prefix anlegen · **Rockstar Games Launcher + Registry importieren** · Virtual Desktop + **VC++-Runtime** installieren · **`fivem://`-Handler** registrieren.
+
+> **Voraussetzung:** GTA V **Legacy** (nicht „Enhanced") installiert und **einmal via Steam gestartet** (installiert den Rockstar Games Launcher), plus `gh`, `git`, `curl`, `python3`, `winetricks`. Danach starten mit `./scripts/launch.sh`.
+
+Lieber alles von Hand nachvollziehen? Die **ausführliche Schritt-für-Schritt-Anleitung** steht weiter unten (Teil A–E).
+
+---
+
 ## ⚖️ Wichtig / Rechtliches (bitte lesen)
 
 - Der FiveM-Client ist **quelloffen** (Cfx.re). Das **Weitergeben von selbst kompilierten Client-Binaries verstößt gegen die Cfx.re-TOS** — deshalb **kompiliert hier jeder seine eigene Version selbst** (genau das macht diese Anleitung). In diesem Repo sind **nur Skripte & Doku, keine Binaries**.
@@ -99,6 +120,8 @@ RELEASE_DIR=~/FiveM/release ./scripts/launch.sh
   ![Rockstar Login](images/04-rockstar-login.png)
 
 > **Warum Steam für den Auto-Login?** GTA V gehört deinem Steam-Account. Der Rockstar Launcher holt sich das „Entitlement" (Besitznachweis) über den laufenden Steam-Client → kein Passwort nötig. Ist Steam zu, geht der manuelle Rockstar-Login.
+
+> **Hinweis „Ver. 0":** Unten rechts im FiveM-Fenster steht als Version „Ver. 0". Das ist **rein kosmetisch** und **kein Fehler** — der selbst gebaute Dev-Build hat keine eingebettete Versionsnummer (die setzt sonst die offizielle Cfx.re-Release-CI). Funktionalität ist davon nicht betroffen.
 
 ---
 
