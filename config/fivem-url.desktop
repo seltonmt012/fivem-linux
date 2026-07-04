@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=FiveM URL Handler
+Exec=/home/seltonmt/.local/bin/fivem-url-handler.sh %u
+MimeType=x-scheme-handler/fivem;
+NoDisplay=true
+Terminal=false

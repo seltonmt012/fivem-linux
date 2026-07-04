@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=FiveM (Linux)
+Comment=Selbst gebauter FiveM-Client (Gogsi wine-win10) via GE-Proton
+Exec=/run/media/seltonmt/tb2/FiveM-build/launch.sh
+Icon=applications-games
+Terminal=false
+Categories=Game;

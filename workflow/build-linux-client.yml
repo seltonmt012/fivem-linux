@@ -1,0 +1,110 @@
+name: build-linux-client
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Build FiveM five release for Wine
+    runs-on: windows-2022
+    timeout-minutes: 350
+    env:
+      PROGRAM: five
+      GYP_MSVS_VERSION: '2022'
+      npm_config_msvs_version: '2022'
+    steps:
+      - name: Checkout wine-win10 to C-drive
+        shell: bash
+        run: |
+          mkdir -p /c/b && cd /c/b
+          git init .
+          git config core.symlinks true
+          git remote add origin https://github.com/seltonmt012/fivem.git
+          git pull origin wine-win10 --depth=1
+          git submodule update --jobs=8 --init --depth=1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup MSVC developer environment (adds MSBuild + VSINSTALLDIR for node-gyp)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Generate and build five release
+        shell: bash
+        run: |
+          cd /c/b
+          python -m pip install setuptools || py -m pip install setuptools || true
+          pwsh ./fxd.ps1 get-chrome
+          ./prebuild.cmd
+          pwsh ./fxd.ps1 gen -game five
+          cd code/build/five
+          MSBuild.exe CitizenMP.sln -t:build -restore -p:RestorePackagesConfig=true -p:preferredtoolarchitecture=x64 -p:configuration=release -p:WindowsTargetPlatformVersion=10.0.22621.0 -maxcpucount:4 -v:m -fl1 "-flp1:logfile=errors.log;errorsonly" || { echo '=== errors.log ==='; cat errors.log 2>/dev/null | tail -120; exit 1; }
+
+      - name: Assemble runnable layout (postbuild, CI cleared)
+        shell: pwsh
+        env:
+          CI: ''
+        run: |
+          Set-Location C:\b
+          $L = "C:\b\code\bin\five\release"
+          $ErrorActionPreference = 'Continue'
+          Write-Host "=== running run_postbuild.ps1 (UI build + layout) ==="
+          try {
+            & .\code\tools\build\run_postbuild.ps1 -LayoutDir $L -Game five -Configuration release
+          } catch {
+            Write-Host "postbuild threw (continuing with fallback copies): $_"
+          }
+          Write-Host "=== fallback: ensure critical static layout present ==="
+          New-Item -ItemType Directory -Force "$L\bin"     | Out-Null
+          New-Item -ItemType Directory -Force "$L\bin\cef" | Out-Null
+          New-Item -ItemType Directory -Force "$L\citizen" | Out-Null
+          Copy-Item -Force -Recurse data\shared\*   "$L\" -ErrorAction SilentlyContinue
+          Copy-Item -Force -Recurse data\client\*   "$L\" -ErrorAction SilentlyContinue
+          Copy-Item -Force -Recurse data\launcher\* "$L\" -ErrorAction SilentlyContinue
+          $cef = Get-ChildItem vendor -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'cef*' } | Select-Object -First 1
+          if ($cef) {
+            Write-Host "CEF at $($cef.FullName)"
+            Copy-Item -Force "$($cef.FullName)\Release\*.dll" "$L\bin\" -ErrorAction SilentlyContinue
+            Copy-Item -Force "$($cef.FullName)\Release\*.bin" "$L\bin\" -ErrorAction SilentlyContinue
+            Copy-Item -Force "$($cef.FullName)\Resources\icudtl.dat" "$L\bin\" -ErrorAction SilentlyContinue
+            Copy-Item -Force "$($cef.FullName)\Resources\*.pak" "$L\bin\cef\" -ErrorAction SilentlyContinue
+            Copy-Item -Force "$($cef.FullName)\Resources\locales\en-US.pak" "$L\bin\cef\" -ErrorAction SilentlyContinue
+          } else { Write-Host "WARNING: no CEF dir found in vendor" }
+          # NOTE: keep 'adhesive' in components.json — under Wine the client auto-substitutes
+          # the open-source 'sticky' component (ComponentLoader.cpp) and shows an "Insecure mode"
+          # notice. Stripping adhesive breaks that substitution (FatalError: Unknown component adhesive).
+          Write-Host "=== layout checks ==="
+          Write-Host ("components.json: " + (Test-Path "$L\components.json"))
+          Write-Host ("citizen\ui.zip:  " + (Test-Path "$L\citizen\ui.zip"))
+          Write-Host ("bin\libcef.dll:  " + (Test-Path "$L\bin\libcef.dll"))
+
+      - name: List build output
+        if: always()
+        shell: bash
+        run: |
+          echo "=== code/bin/five ==="
+          ls -la /c/b/code/bin/five 2>/dev/null || echo "no bin/five"
+          echo "=== release listing ==="
+          ls /c/b/code/bin/five/release 2>/dev/null | head -80 || echo "no release dir"
+
+      - name: Upload client artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fivem-five-release
+          path: 'C:\b\code\bin\five\release'
+          if-no-files-found: warn
+          retention-days: 7
