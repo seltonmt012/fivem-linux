@@ -2,29 +2,43 @@
 
 **FiveM (GTA V Multiplayer) auf Ubuntu/Linux zum Laufen bringen — komplett, Schritt für Schritt.**
 
-Kein Dual-Boot, keine VM. Der FiveM-Client wird selbst kompiliert (in der GitHub-Cloud, keine Windows-Installation nötig) und läuft über **GE-Proton** direkt auf Linux — bis ins Hauptmenü, mit Rockstar-Login und Server-Beitritt.
+Kein Dual-Boot, keine VM. Der FiveM-Client wird selbst kompiliert (in der GitHub-Cloud, keine Windows-Installation nötig) und läuft über **GE-Proton** direkt auf Linux — Hauptmenü, Rockstar-Login und GTA-V-Engine funktionieren.
 
 ![FiveM Hauptmenü auf Linux](images/01-fivem-main-menu.png)
 *Das FiveM-Hauptmenü mit Live-Serverliste — nativ auf Ubuntu.*
+
+> ### ⚠️ Status (aktiv in Arbeit)
+> **Funktioniert:** Cloud-Build · Start unter GE-Proton · **Hauptmenü** · **Rockstar-/Social-Club-Login** (auto über Steam oder manuell) · GTA-V-Engine lädt · Server-**Handshake wird erreicht**.
+> **Noch offen:** Der Server-**Beitritt hängt aktuell beim Handshake**, weil der bisher genutzte Fork-Branch (`Gogsi/fivem` `wine-win10`) **~40 Commits hinter dem aktuellen FiveM** liegt — genau darin fehlen **Netzwerk-Fixes** (`Network timeouts`, `gta-net-five frame handling`). Fix in Arbeit: Build aus **aktuellem `citizenfx/master` + unseren 2 Wine-Patches** (Workflow [`workflow/build-rebased.yml`](workflow/build-rebased.yml)).
+> **Grenzen (bleiben):** „Insecure Mode" → Server mit **Anti-Cheat** lehnen ab; Server mit **`sv_enforceSteamAuth true`** (Steam-Pflicht) sind von Linux aus **nicht** joinbar (der Client kann kein gültiges GTA-V-Steam-Ticket liefern — fundamentale Linux-Grenze, im Detail unten). Ziel: **eigener Server / Server ohne Steam-Zwang & ohne Anti-Cheat.**
 
 ---
 
 ## 🚀 Schnellstart (ein Befehl)
 
-Der Installer macht **alles automatisch** — Client in der GitHub-Cloud kompilieren **und** das komplette Linux-Setup. Du musst dich nur **selbst einloggen** (das kann kein Skript für dich): einmalig bei der GitHub CLI (`gh auth login`) für den Cloud-Build, und später im Spiel bei **Rockstar** & **Cfx.re**.
+**Ein `git clone`, ein `./scripts/install.sh` — fertig.** Das Skript installiert **alles selbst**: erst die **System-Pakete** (via `apt`/`dnf`/`pacman`/`zypper`), dann GE-Proton & umu, kompiliert den Client in der GitHub-Cloud und richtet die komplette Linux-Laufzeit ein. Du **loggst dich nur selbst ein** (das kann kein Skript für dich): bei der **GitHub CLI** (`gh auth login`) für den Cloud-Build, und später im Spiel bei **Rockstar** & **Cfx.re**.
 
 ```bash
 git clone https://github.com/seltonmt012/fivem-linux.git
 cd fivem-linux
 chmod +x scripts/*.sh
 
-gh auth login          # falls noch nicht eingeloggt
-./scripts/install.sh   # Build (~50 Min, GitHub Cloud) + komplettes Setup
+./scripts/install.sh   # installiert System-Pakete, baut den Client (~50 Min, Cloud) & richtet alles ein
 ```
 
-Was `install.sh` erledigt: `Gogsi/fivem` forken · Branch `wine-win10` + Workflow anlegen · Build in GitHub Actions starten und auf Fertigstellung warten · Artefakt herunterladen · umu-launcher & **GE-Proton automatisch** laden · Pfade (GTA V, Steam-Prefix) **auto-detecten** · `CitizenFX.ini` schreiben · Wine-Prefix anlegen · **Rockstar Games Launcher + Registry importieren** · Virtual Desktop + **VC++-Runtime** installieren · **`fivem://`-Handler** registrieren.
+Das Skript fragt dich, falls `gh` noch nicht eingeloggt ist, nach einem einmaligen `gh auth login` — danach einfach `./scripts/install.sh` erneut starten. Zum Schluss startest du mit `./scripts/launch.sh`.
 
-> **Voraussetzung:** GTA V **Legacy** (nicht „Enhanced") installiert und **einmal via Steam gestartet** (installiert den Rockstar Games Launcher), plus `gh`, `git`, `curl`, `python3`, `winetricks`. Danach starten mit `./scripts/launch.sh`.
+> **Einzige Voraussetzung, die das Skript nicht abnehmen kann:** GTA V **Legacy** (nicht „Enhanced") installiert und **einmal via Steam gestartet** — dabei installiert GTA V den **Rockstar Games Launcher**, den der Installer übernimmt. Alles andere (Pakete, `gh`, GE-Proton, umu …) macht das Skript selbst.
+
+### Was macht das Skript? (in Klartext)
+
+1. **System-Pakete installieren.** Erkennt deine Distro und installiert mit `sudo` die nötigen Pakete: `git`, `curl`, `wget`, `python3`, `winetricks`, `xdotool`, `x11-utils`, `imagemagick`, `cabextract`, `p7zip`, `fuse` — plus die **GitHub CLI `gh`**. Auf Debian/Ubuntu wird zusätzlich die **32-bit-Architektur (i386)** für Wine/Proton aktiviert. (Überspringbar mit `SKIP_SYSTEM_DEPS=1`.)
+2. **GitHub-Login prüfen.** Bist du nicht eingeloggt, sagt dir das Skript klar Bescheid (`gh auth login`) und bricht ab — danach einfach neu starten.
+3. **Client in der Cloud bauen.** Forkt unseren fertigen Fork **[`seltonmt012/fivem`](https://github.com/seltonmt012/fivem)** (hat den Wine-Patch + Build-Workflow schon eingebaut), startet den Build auf einem Windows-Runner in **GitHub Actions** und wartet, bis er fertig ist (~50 Min). Kein lokales Windows nötig.
+4. **Artefakt herunterladen.** Lädt den fertigen `fivem-five-release`-Build nach `~/FiveM/release/`.
+5. **Laufzeit beschaffen.** Lädt **umu-launcher** und das neueste **GE-Proton** automatisch herunter.
+6. **Pfade finden.** Sucht deine **GTA-V-Installation** und den **Steam-Proton-Prefix** automatisch (Steam-Bibliotheken, Flatpak, externe Laufwerke).
+7. **Alles verdrahten.** Schreibt `CitizenFX.ini`, legt den **Wine-Prefix** an, **importiert Rockstar Games Launcher + Registry** aus deinem Steam-Prefix, aktiviert den **Wine-Virtual-Desktop**, installiert die **VC++-Runtime** und registriert den **`fivem://`-Handler**.
 
 Lieber alles von Hand nachvollziehen? Die **ausführliche Schritt-für-Schritt-Anleitung** steht weiter unten (Teil A–E).
 
@@ -55,10 +69,16 @@ Der aktuelle FiveM-Bootstrapper nutzt einen **WinUI/XAML-Splash**, der unter Win
 
 ## ✅ Voraussetzungen
 
-1. **GTA V — Legacy Edition** (nicht „Enhanced"!) installiert, **einmal via Steam gestartet** — dabei installiert GTA V den **Rockstar Games Launcher + Social Club** in seinen Proton-Prefix (den übernehmen wir).
-2. **GE-Proton** (z. B. `GE-Proton10-34`) → nach `~/.local/share/Steam/compatibilitytools.d/` (Download: [GloriousEggroll/proton-ge-custom](https://github.com/GloriousEggroll/proton-ge-custom/releases)).
-3. Pakete: `git`, `curl`, `python3`, `winetricks`, `xdotool`, `x11-utils`, `imagemagick`, und die [GitHub CLI `gh`](https://cli.github.com/) (eingeloggt: `gh auth login`).
-4. Ein **GitHub-Account** (zum Kompilieren in der Cloud).
+**Nur Punkt 1 musst du selbst erledigen — den Rest übernimmt `install.sh`:**
+
+1. **GTA V — Legacy Edition** (nicht „Enhanced"!) installiert, **einmal via Steam gestartet** — dabei installiert GTA V den **Rockstar Games Launcher + Social Club** in seinen Proton-Prefix (den übernehmen wir). *(Kann kein Skript für dich tun.)*
+2. Ein **GitHub-Account** (zum Kompilieren in der Cloud) — das Skript hilft beim Login (`gh auth login`).
+
+Alles Weitere richtet der Installer automatisch ein:
+
+- **System-Pakete** — `git`, `curl`, `wget`, `python3`, `winetricks`, `xdotool`, `x11-utils`, `imagemagick`, `cabextract`, `p7zip`, `fuse` sowie die [GitHub CLI `gh`](https://cli.github.com/). Erledigt **Schritt 0** ([`scripts/install-deps-system.sh`](scripts/install-deps-system.sh)) für `apt`/`dnf`/`pacman`/`zypper`, inkl. `i386`-Multiarch auf Debian/Ubuntu. Willst du die Pakete lieber selbst verwalten: `SKIP_SYSTEM_DEPS=1 ./scripts/install.sh`.
+- **GE-Proton** (neuestes Release) → automatisch nach `~/.local/share/Steam/compatibilitytools.d/` geladen.
+- **umu-launcher** → automatisch als self-contained Zipapp geladen.
 
 ---
 

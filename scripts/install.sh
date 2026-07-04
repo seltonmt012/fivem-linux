@@ -11,6 +11,7 @@
 #    • im Spiel  Rockstar + Cfx.re    (Konten, kann kein Script übernehmen)
 #
 #  Ablauf:
+#    Schritt 0 – System-Pakete installieren (apt/dnf/pacman/zypper) + gh-Check
 #    Teil A – Client in GitHub Actions bauen (Fork, Branch, Workflow, Poll, DL)
 #    Teil B – Laufzeit einrichten (umu, GE-Proton, Prefix, RGL, VC++, Handler)
 #
@@ -41,7 +42,38 @@ DEFAULT_BRANCH="${DEFAULT_BRANCH:-wine-win10}"
 WORKFLOW_FILE="${WORKFLOW_FILE:-build-linux-client.yml}"
 # Auf true setzen, um Teil A (Cloud-Build) zu überspringen und nur Teil B zu machen:
 SKIP_BUILD="${SKIP_BUILD:-false}"
+# SKIP_SYSTEM_DEPS=1 überspringt Schritt 0 (System-Pakete via apt/dnf/pacman/zypper).
+SKIP_SYSTEM_DEPS="${SKIP_SYSTEM_DEPS:-0}"
 ###############################################################################
+
+# --help / Usage (vor allem anderen, braucht keine Runtime)
+case "${1:-}" in
+  -h|--help)
+    cat <<'EOF'
+install.sh — One-Shot-Installer für FiveM nativ auf Linux
+
+Verwendung:
+  ./scripts/install.sh [--help]
+
+Macht in einem Rutsch:
+  Schritt 0  System-Pakete installieren (git, curl, python3, winetricks,
+             xdotool, x11-utils, imagemagick, cabextract, p7zip, fuse, gh …)
+  Teil A     FiveM-Client in GitHub Actions bauen (Fork + Workflow, ~50 Min)
+  Teil B     Laufzeit einrichten (umu, GE-Proton, Prefix, Rockstar, VC++, Handler)
+
+Nützliche Umgebungsvariablen:
+  SKIP_SYSTEM_DEPS=1   Schritt 0 (System-Pakete) überspringen
+  SKIP_BUILD=true      Teil A (Cloud-Build) überspringen, nur Laufzeit einrichten
+  RELEASE_DIR=<pfad>   Zielordner für den Client (Default: ~/FiveM/release)
+  GTA_DIR=<pfad>       GTA-V-Legacy-Ordner (sonst automatisch gesucht)
+  PROTONPATH=<pfad>    GE-Proton-Installation (sonst neuestes Release geladen)
+
+Du loggst dich nur selbst ein: gh auth login (GitHub) sowie im Spiel bei
+Rockstar und Cfx.re.
+EOF
+    exit 0
+    ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -63,6 +95,26 @@ trap 'on_err $LINENO' ERR
 echo "${c_bold}🐧  FiveM-Linux One-Shot-Installer${c_reset}"
 echo "    Release-Ziel : $RELEASE_DIR"
 echo "    Wine-Prefix  : $PREFIX"
+
+# =============================================================================
+#  SCHRITT 0 — System-Abhängigkeiten (Pakete + gh) installieren
+# =============================================================================
+# Läuft ganz am Anfang, damit auf einem frischen System nichts von Hand nötig
+# ist. Ausgelagert nach install-deps-system.sh (distro-unabhängig, idempotent).
+# Überspringbar mit SKIP_SYSTEM_DEPS=1.
+if [ "$SKIP_SYSTEM_DEPS" = "1" ]; then
+  step "Schritt 0 übersprungen (SKIP_SYSTEM_DEPS=1)"
+else
+  DEPS_SCRIPT="$SCRIPT_DIR/install-deps-system.sh"
+  if [ -f "$DEPS_SCRIPT" ]; then
+    # In Subshell ausführen, damit dessen 'exit' den Installer nicht beendet;
+    # bei echtem Fehler (z. B. gh-Login fehlt) brechen wir aber sauber ab.
+    bash "$DEPS_SCRIPT" || die "System-Abhängigkeiten unvollständig (siehe oben). Nach Behebung install.sh erneut starten."
+  else
+    warn "install-deps-system.sh nicht gefunden — überspringe System-Pakete."
+    warn "Stelle sicher, dass git curl python3 winetricks xdotool x11-utils gh installiert sind."
+  fi
+fi
 
 # =============================================================================
 #  TEIL A — Client in der GitHub-Cloud bauen
