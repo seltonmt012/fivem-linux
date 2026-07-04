@@ -32,10 +32,12 @@ STEAM_GTAV_PREFIX="${STEAM_GTAV_PREFIX:-}"
 PROTONPATH="${PROTONPATH:-}"
 # Virtual-Desktop-Auflösung (macht Wine-Dialoge / Rockstar-Login sichtbar):
 VDESK_RES="${VDESK_RES:-1600x900}"
-# Upstream-Fork-Quelle (der Wine-Patch) und Build-Branch:
-UPSTREAM_REPO="${UPSTREAM_REPO:-Gogsi/fivem}"
+# Fork-Quelle: UNSER fertiger Fork mit Wine-Patch (Branch wine-win10, ist Default)
+# UND dem fork-unabhaengigen Build-Workflow bereits eingebaut -> du forkst nur noch
+# und startest den Build. (Basiert auf Gogsi/fivem wine-win10.)
+UPSTREAM_REPO="${UPSTREAM_REPO:-seltonmt012/fivem}"
 BUILD_BRANCH="${BUILD_BRANCH:-wine-win10}"
-DEFAULT_BRANCH="${DEFAULT_BRANCH:-master}"
+DEFAULT_BRANCH="${DEFAULT_BRANCH:-wine-win10}"
 WORKFLOW_FILE="${WORKFLOW_FILE:-build-linux-client.yml}"
 # Auf true setzen, um Teil A (Cloud-Build) zu überspringen und nur Teil B zu machen:
 SKIP_BUILD="${SKIP_BUILD:-false}"

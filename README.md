@@ -66,21 +66,22 @@ Der aktuelle FiveM-Bootstrapper nutzt einen **WinUI/XAML-Splash**, der unter Win
 
 Du baust den gepatchten Client **in der Cloud** auf einem Windows-Runner — kein lokales Windows nötig.
 
-1. **Forke** [`Gogsi/fivem`](https://github.com/Gogsi/fivem) in deinen GitHub-Account und aktiviere **Actions** (Tab „Actions" → „I understand… enable").
-2. Stelle sicher, dass der Branch **`wine-win10`** existiert. Falls nicht, per API aus dem Original anlegen:
-   ```bash
-   SHA=$(gh api repos/Gogsi/fivem/branches/wine-win10 --jq .commit.sha)
-   gh api -X POST repos/<DU>/fivem/git/refs -f ref=refs/heads/wine-win10 -f sha="$SHA"
-   ```
-3. Lade den Workflow [`workflow/build-linux-client.yml`](workflow/build-linux-client.yml) aus diesem Repo in deinen Fork nach `.github/workflows/build-linux-client.yml` — **auch auf `master`** (sonst wird `workflow_dispatch` nicht erkannt).
-4. Starte ihn: Actions → „build-linux-client" → „Run workflow" → Branch `wine-win10`.
-5. Nach ~50 Min: Artefakt **`fivem-five-release`** herunterladen und nach z. B. `~/FiveM/release/` **entpacken**.
+> **✅ Am einfachsten: nimm unseren fertigen Fork [`seltonmt012/fivem`](https://github.com/seltonmt012/fivem).**
+> Der hat den **Wine-Linux-Patch** (Branch `wine-win10`, ist der Default-Branch) **und den fertigen Build-Workflow** schon eingebaut — du musst also **nicht** selbst `Gogsi/fivem` forken, keinen Branch anlegen und keinen Workflow hochladen. Einfach forken und bauen:
 
-**Die 6 Build-Hürden, die der Workflow löst** (falls du ihn selbst schreibst):
+1. **Forke** [`seltonmt012/fivem`](https://github.com/seltonmt012/fivem) in deinen GitHub-Account (du bekommst `wine-win10` automatisch als Default-Branch, inkl. Workflow).
+2. Im Fork **Actions aktivieren** (Tab „Actions" → „I understand… enable"). Der Workflow ist **fork-unabhängig** — er baut automatisch dein eigenes Repo/deinen Branch.
+3. Build starten: Actions → „build-linux-client" → „Run workflow" → Branch `wine-win10`.
+4. Nach ~50 Min: Artefakt **`fivem-five-release`** herunterladen und nach z. B. `~/FiveM/release/` **entpacken**.
+
+*(Oder komplett automatisch: `./scripts/install.sh` macht genau das — forkt `seltonmt012/fivem`, startet den Build, wartet und lädt das Artefakt.)*
+
+<details><summary>Selber von <code>Gogsi/fivem</code> forken? Die 6 Build-Hürden, die der Workflow löst</summary>
 - `runs-on: windows-2022` — **nicht** `windows-latest`! Das hat inzwischen VS 2026, das FiveMs altes node-gyp nicht kennt (`ffi-napi`-Fehler).
 - `ilammy/msvc-dev-cmd` statt hardcodiertem VS-Pfad (setzt `VSINSTALLDIR` für node-gyp) + `GYP_MSVS_VERSION=2022`.
 - MSBuild mit `-p:WindowsTargetPlatformVersion=10.0.22621.0` (Runner hat nicht die gepinnte 22000).
 - Extra-Schritt: `run_postbuild.ps1` mit `env: CI: ''` ausführen — sonst fehlen **components.json, citizen/ui.zip, CEF (`bin/`), citizen/ros, data/** im Artefakt.
+</details>
 
 ---
 

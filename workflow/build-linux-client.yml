@@ -17,14 +17,15 @@ jobs:
       GYP_MSVS_VERSION: '2022'
       npm_config_msvs_version: '2022'
     steps:
-      - name: Checkout wine-win10 to C-drive
+      - name: Checkout this repo/branch to C-drive (fork-agnostic)
         shell: bash
         run: |
           mkdir -p /c/b && cd /c/b
           git init .
           git config core.symlinks true
-          git remote add origin https://github.com/seltonmt012/fivem.git
-          git pull origin wine-win10 --depth=1
+          # Build THIS repo at the branch the workflow was dispatched on (works on any fork).
+          git remote add origin "${{ github.server_url }}/${{ github.repository }}.git"
+          git -c http.extraheader="AUTHORIZATION: bearer ${{ github.token }}" pull origin "${{ github.ref_name }}" --depth=1
           git submodule update --jobs=8 --init --depth=1
 
       - name: Setup Node
