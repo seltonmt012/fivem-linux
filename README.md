@@ -1,20 +1,60 @@
-# FiveM nativ auf Linux 🐧
+# FiveM nativ auf Linux 🐧 — jetzt **in-game** ✅
 
-**FiveM (GTA V Multiplayer) auf Ubuntu/Linux zum Laufen bringen — komplett, Schritt für Schritt.**
+**FiveM (GTA V Multiplayer) läuft auf Ubuntu/Linux bis ins Spiel hinein — kein Dual-Boot, keine VM.**
 
-Kein Dual-Boot, keine VM. Der FiveM-Client wird selbst kompiliert (in der GitHub-Cloud, keine Windows-Installation nötig) und läuft über **GE-Proton** direkt auf Linux — Hauptmenü, Rockstar-Login und GTA-V-Engine funktionieren.
+Der FiveM-Client wird selbst kompiliert (in der GitHub-Cloud, keine Windows-Installation nötig) und läuft über **GE-Proton** direkt auf Linux. **Neu und erstmals bestätigt:** Der selbst gebaute Client **spawnt komplett in-game** auf einem **eigenen / lokalen Server** — der Server loggt den Spielerbeitritt, der Client zeigt `^2Game finished loading`, und du stehst in der Spielwelt.
 
 ![FiveM Hauptmenü auf Linux](images/01-fivem-main-menu.png)
 *Das FiveM-Hauptmenü mit Live-Serverliste — nativ auf Ubuntu.*
 
-> ### ⚠️ Was geht — und was (prinzipiell) nicht
-> **Funktioniert:** Cloud-Build · Start unter GE-Proton · **Hauptmenü** · **Rockstar-/Social-Club-Login** · GTA-V-Engine lädt · Build-Switch (3258→3570) · **TCP-Handshake zu Servern klappt** (bei einem legitimen Testserver lief er sauber durch).
-> **Beitritt zu ÖFFENTLICHEN Servern (z. B. große RP-Server) geht NICHT — prinzipbedingt:** Ein **selbst kompilierter** FiveM-Client kann sich bei normalen Servern **absichtlich nicht authentifizieren** (Cfx.re-Anti-Cheat-Schutz — [von einem Cfx-Mod bestätigt](https://forum.cfx.re/t/buit-from-source-fivem-wont-connect-to-servers-resolved/5124758)). Der Server antwortet dann mit *„No authentication ticket was specified"*. Der **offizielle** Client (der sich authentifizieren *würde*) **crasht unter Wine sofort** am WinUI/XAML-Splash (`Windows.UI.Xaml.Hosting` → `c0000409`) — auf **Wine 10 und Wine 11** getestet, das ist eine ungelöste Wine-Grenze. **→ Öffentliche Server sind von Linux aus derzeit nicht spielbar; dafür braucht es Windows (Dual-Boot).**
-> **Was DIESER Build KANN:** Server mit **`sv_lan 1`** und **selbst gehostete Server** (auch lokal auf demselben PC) — dort verbindet der selbst gebaute Client **komplett bis in-game**. Ideal für eigenes RP / LAN / Entwicklung. Ein fertiges lokales Test-Server-Setup liegt in [`local-server/`](local-server/) (nur ein kostenloser Lizenz-Key nötig).
+> ### ✅ Was jetzt geht — und was (prinzipbedingt) nicht
+> **Funktioniert komplett bis in-game:** dein **eigener / lokaler / selbst gehosteter Server** (gleicher PC oder LAN) — mit **entferntem Server-Anti-Cheat (`svadhesive`) + `sv_lan 1` + Gratis-Key**. Ideal für **eigenes RP, LAN, Entwicklung & Testing**. Dazu: Cloud-Build · Start unter GE-Proton · **Hauptmenü** · **Rockstar-/Social-Club-Login** · GTA-V-Engine · Build-Switch.
+>
+> **Geht NICHT — öffentliche / offizielle Server (große RP-Server):** Ein **selbst kompilierter** Client kann sich dort **absichtlich nicht authentifizieren** (Cfx.re-Anti-Cheat-Design, [von einem Cfx-Mod bestätigt](https://forum.cfx.re/t/buit-from-source-fivem-wont-connect-to-servers-resolved/5124758)) — er bekommt kein gültiges Auth-Ticket. Der **offizielle** Client (der sich authentifizieren *würde*) **crasht unter Wine** am WinUI/XAML-Splash (`Windows.UI.Xaml.Hosting` → `c0000409`, auf **Wine 10 und 11** getestet). **→ Für öffentliche Server ist Windows (Dual-Boot) derzeit der einzige Weg.**
+>
+> **Framework-Hinweis:** **ESX/QBCore** brauchen Spieler-Identifier, die `adhesive` liefert — die laufen auf dem lokalen Server **nicht**. **Basic-, Freeroam- & eigene Server** funktionieren problemlos.
 
 ---
 
-## 🚀 Schnellstart (ein Befehl)
+## Inhalt
+
+- [🎮 So kommst du in-game (lokaler Server)](#-so-kommst-du-in-game-lokaler-server)
+- [🚀 Client bauen & installieren (ein Befehl)](#-client-bauen--installieren-ein-befehl)
+- [⚖️ Wichtig / Rechtliches](#️-wichtig--rechtliches)
+- [🧩 Warum es früher nicht ging (und jetzt schon)](#-warum-es-früher-nicht-ging-und-jetzt-schon)
+- [✅ Voraussetzungen](#-voraussetzungen)
+- [📦 Teil A — Client kompilieren](#-teil-a--client-kompilieren-github-actions-50-min)
+- [⚙️ Teil B — Linux-Setup](#️-teil-b--linux-setup-automatisch)
+- [▶️ Teil C — Starten & Anmelden](#️-teil-c--starten--anmelden)
+- [🔗 Teil D — Cfx.re-Account & `fivem://`-Handler](#-teil-d--cfxre-account--fivem-handler)
+- [🎮 Teil E — Spielen & Game-Build-Wechsel](#-teil-e--spielen--game-build-wechsel)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+
+---
+
+## 🎮 So kommst du in-game (lokaler Server)
+
+Das ist der Kern des Ganzen — und der Schritt, den kaum jemand klar dokumentiert. Der selbst gebaute Client läuft unter Wine im **„Insecure Mode"** (das Client-Anti-Cheat `adhesive` funktioniert auf Wine nicht → wird durch den Open-Source-Stub `sticky` ersetzt). Ein normaler Server verweigert diesem Client dann das Mounten seiner Ressourcen (*„Could not get resource mounter for resource sessionmanager"*). **Die Lösung liegt auf der Server-Seite:**
+
+1. **Client bauen & starten.** Einmalig `./scripts/install.sh` ausführen (baut den Client in der Cloud & richtet alles ein), danach den Client über das Desktop-Icon **„FiveM (Linux)"** bis ins Hauptmenü starten. Details unten: [Client bauen & installieren](#-client-bauen--installieren-ein-befehl).
+2. **Lokalen fx-Server aufsetzen** — nativer Linux-FiveM-Server, dann **das Server-Anti-Cheat deaktivieren**:
+   - In `alpine/opt/cfx-server/components.json` den Eintrag **`"svadhesive"` entfernen**,
+   - in der `server.cfg` **`sv_lan 1`** setzen und einen **Gratis-`sv_licenseKey`** eintragen ([portal.cfx.re](https://portal.cfx.re/servers/registration-keys)).
+
+   Ein fertiges Setup (Skript + `server.cfg`) liegt in **[`local-server/`](local-server/)** — dort steht die vollständige Schritt-für-Schritt-Anleitung.
+3. **Verbinden.** Im Client **Direct Connect → `127.0.0.1:30120`** oder direkt:
+
+   ```bash
+   ./scripts/launch.sh "fivem://connect/127.0.0.1:30120"
+   ```
+
+   `sv_lan 1` überbrückt das Auth-Ticket, der Client mountet die Ressourcen — **und du spawnst in-game.** 🎉
+
+> **Warum das funktioniert:** `sv_lan 1` schaltet die Ticket-Prüfung ab, das entfernte `svadhesive` verhindert, dass der Server den Insecure-Client abweist. Beides zusammen = selbst gebauter Linux-Client spielt auf deinem eigenen Server.
+
+---
+
+## 🚀 Client bauen & installieren (ein Befehl)
 
 **Ein `git clone`, ein `./scripts/install.sh` — fertig.** Das Skript installiert **alles selbst**: erst die **System-Pakete** (via `apt`/`dnf`/`pacman`/`zypper`), dann GE-Proton & umu, kompiliert den Client in der GitHub-Cloud und richtet die komplette Linux-Laufzeit ein. Du **loggst dich nur selbst ein** (das kann kein Skript für dich): bei der **GitHub CLI** (`gh auth login`) für den Cloud-Build, und später im Spiel bei **Rockstar** & **Cfx.re**.
 
@@ -26,7 +66,7 @@ chmod +x scripts/*.sh
 ./scripts/install.sh   # installiert System-Pakete, baut den Client (~50 Min, Cloud) & richtet alles ein
 ```
 
-Das Skript fragt dich, falls `gh` noch nicht eingeloggt ist, nach einem einmaligen `gh auth login` — danach einfach `./scripts/install.sh` erneut starten. Zum Schluss startest du mit `./scripts/launch.sh`.
+Das Skript fragt dich, falls `gh` noch nicht eingeloggt ist, nach einem einmaligen `gh auth login` — danach einfach `./scripts/install.sh` erneut starten. Zum Schluss startest du mit `./scripts/launch.sh` oder über das Desktop-Icon **„FiveM (Linux)"**.
 
 > **Einzige Voraussetzung, die das Skript nicht abnehmen kann:** GTA V **Legacy** (nicht „Enhanced") installiert und **einmal via Steam gestartet** — dabei installiert GTA V den **Rockstar Games Launcher**, den der Installer übernimmt. Alles andere (Pakete, `gh`, GE-Proton, umu …) macht das Skript selbst.
 
@@ -48,7 +88,7 @@ Lieber alles von Hand nachvollziehen? Die **ausführliche Schritt-für-Schritt-A
 
 - Der FiveM-Client ist **quelloffen** (Cfx.re). Das **Weitergeben von selbst kompilierten Client-Binaries verstößt gegen die Cfx.re-TOS** — deshalb **kompiliert hier jeder seine eigene Version selbst** (genau das macht diese Anleitung). In diesem Repo sind **nur Skripte & Doku, keine Binaries**.
 - Du brauchst ein **legitimes GTA V** (Steam/Epic/Rockstar) und einen **eigenen Rockstar-Games-Account** + **Cfx.re-Account**.
-- Unter Wine läuft der Client im **„Insecure Mode"** — das Anti-Cheat (`adhesive`) funktioniert auf Wine nicht. Du kannst nur auf **Server ohne aktives Anti-Cheat** (z. B. deinen eigenen Server). Offiziell ist das **experimentell/unsupported**.
+- Unter Wine läuft der Client im **„Insecure Mode"** — das Anti-Cheat (`adhesive`) funktioniert auf Wine nicht. Du kannst nur auf **Server ohne aktives Anti-Cheat** spielen (z. B. deinen eigenen lokalen Server mit entferntem `svadhesive`, siehe oben). Offiziell ist das **experimentell/unsupported**.
 
 Getestet auf **Ubuntu 26.04**, GNOME/Wayland, NVIDIA GTX 1060. Sollte auf den meisten modernen Distros mit GE-Proton laufen.
 
@@ -64,6 +104,8 @@ Der aktuelle FiveM-Bootstrapper nutzt einen **WinUI/XAML-Splash**, der unter Win
 | `NUIWindow.cpp` | Aktiviert DXVK-Shared-Textures unter Wine → CEF/Menü rendert |
 | `DllGameComponent.Win32.cpp` | Überspringt Windows-Speicherlayout-Hack unter Wine |
 | `SEHTableHandler.Win32.cpp` | Überspringt SEH-Hook unter Wine |
+
+Das brachte den Client bis ins Menü. Der **letzte Schritt zum In-Game** war dann kein Client-, sondern ein **Server-Problem**: Der Insecure-Client wird vom Server-Anti-Cheat (`svadhesive`) abgewiesen — deshalb muss dieses **auf dem eigenen Server entfernt** werden (siehe [So kommst du in-game](#-so-kommst-du-in-game-lokaler-server)).
 
 ---
 
@@ -171,7 +213,9 @@ Viele Server verlangen einen bestimmten **GTA-Build** (z. B. `b3570`). FiveM lä
 | GameProcess startet & schließt sofort | **VC++-Runtime fehlt** → `winetricks -q vcrun2022 vcrun2019` |
 | „Rockstar Games Launcher could not be found" | RGL aus dem Steam-Prefix importieren (Teil B) |
 | Rockstar-Login/Insecure-Box **unsichtbar** | Wine-**Virtual Desktop** aktivieren (Teil B) |
-| `FatalError: Unknown component adhesive` | `adhesive` **nicht** aus `components.json` entfernen — Wine ersetzt es durch `sticky` |
+| `FatalError: Unknown component adhesive` (Client) | `adhesive` **nicht** aus dem **Client** entfernen — Wine ersetzt es durch `sticky` |
+| „Could not get resource mounter for … sessionmanager" | **Server**-seitig `svadhesive` aus `components.json` entfernen + `sv_lan 1` ([in-game-Setup](#-so-kommst-du-in-game-lokaler-server)) |
+| Verbindet nur zu eigenem Server, nicht zu öffentlichen | **So gewollt** — öffentliche Server brauchen Windows (siehe Status oben) |
 | Browser: „Keine Anwendung verfügbar" bei Auth | `fivem://`-Handler registrieren (Teil D) |
 | Build-Switch startet nicht neu | den Loop-`launch.sh` benutzen (Teil E) |
 | Absturz debuggen | `WINEDEBUG=+seh,+tid PROTON_LOG=1 ./launch.sh` → `~/steam-fivem.log` |
@@ -185,4 +229,4 @@ Viele Server verlangen einen bestimmten **GTA-Build** (z. B. `b3570`). FiveM lä
 - **Cfx.re / FiveM** — der quelloffene Client.
 - **[umu-launcher](https://github.com/Open-Wine-Components/umu-launcher)** & **[GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom)**.
 
-*Diese Anleitung dokumentiert einen realen, funktionierenden Aufbau. „Results may vary" — Wine/Proton-Versionen ändern sich. PRs & Ergänzungen willkommen.*
+*Diese Anleitung dokumentiert einen realen, funktionierenden Aufbau — inklusive des ersten bestätigten In-Game-Spawns eines selbst gebauten FiveM-Clients auf Linux. „Results may vary" — Wine/Proton-Versionen ändern sich. PRs & Ergänzungen willkommen.*
