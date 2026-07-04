@@ -13,8 +13,12 @@ GTA_DIR="${GTA_DIR:-$HOME/.steam/steam/steamapps/common/Grand Theft Auto V}"
 STEAM_GTAV_PREFIX="${STEAM_GTAV_PREFIX:-$HOME/.steam/steam/steamapps/compatdata/271590/pfx}"
 # GE-Proton install (download from GloriousEggroll/proton-ge-custom releases):
 PROTONPATH="${PROTONPATH:-$HOME/.local/share/Steam/compatibilitytools.d/GE-Proton10-34}"
-# Virtual-desktop resolution (makes Wine dialogs/Rockstar-login visible):
-VDESK_RES="${VDESK_RES:-1600x900}"
+# Virtual-desktop resolution — makes Wine dialogs/Rockstar-login visible AND
+# determines fullscreen: it MUST match your native resolution, otherwise FiveM
+# renders smaller and you get black bars. Auto-detected from your primary display.
+VDESK_RES="${VDESK_RES:-$(xrandr 2>/dev/null | grep -oE '[0-9]{3,}x[0-9]{3,}\+0\+0' | grep -oE '^[0-9]+x[0-9]+' | head -1)}"
+VDESK_RES="${VDESK_RES:-$(xrandr 2>/dev/null | awk '/\*/{print $1; exit}')}"
+VDESK_RES="${VDESK_RES:-1920x1080}"
 ###############################################################################
 
 BASE="$(cd "$(dirname "$RELEASE_DIR")" && pwd)"

@@ -1,4 +1,7 @@
+; EXAMPLE — scripts/install.sh writes the real CitizenFX.ini automatically with the
+; GTA-V path it finds on your system. IVPath is the Wine (Z:\) path to your GTA V
+; Legacy install, e.g. Z:\home\<user>\.steam\steam\steamapps\common\Grand Theft Auto V
 [Game]
-IVPath=Z:\run\media\seltonmt\tb2\Steam\steamapps\common\Grand Theft Auto V
+IVPath=Z:\path\to\Steam\steamapps\common\Grand Theft Auto V
 PoolSizesIncrease=
 ReplaceExecutable=0

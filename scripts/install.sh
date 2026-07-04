@@ -31,8 +31,11 @@ GTA_DIR="${GTA_DIR:-}"
 STEAM_GTAV_PREFIX="${STEAM_GTAV_PREFIX:-}"
 # GE-Proton-Installation. Leer = neuestes Release automatisch herunterladen.
 PROTONPATH="${PROTONPATH:-}"
-# Virtual-Desktop-Auflösung (macht Wine-Dialoge / Rockstar-Login sichtbar):
-VDESK_RES="${VDESK_RES:-1600x900}"
+# Virtual-Desktop-Auflösung — sichtbare Wine-Dialoge UND Vollbild: MUSS deine native
+# Auflösung sein, sonst rendert FiveM kleiner (schwarze Ränder). Auto-erkannt.
+VDESK_RES="${VDESK_RES:-$(xrandr 2>/dev/null | grep -oE '[0-9]{3,}x[0-9]{3,}\+0\+0' | grep -oE '^[0-9]+x[0-9]+' | head -1)}"
+VDESK_RES="${VDESK_RES:-$(xrandr 2>/dev/null | awk '/\*/{print $1; exit}')}"
+VDESK_RES="${VDESK_RES:-1920x1080}"
 # Fork-Quelle: UNSER fertiger Fork mit Wine-Patch (Branch wine-win10, ist Default)
 # UND dem fork-unabhaengigen Build-Workflow bereits eingebaut -> du forkst nur noch
 # und startest den Build. (Basiert auf Gogsi/fivem wine-win10.)
@@ -447,9 +450,27 @@ MimeType=x-scheme-handler/fivem;
 NoDisplay=true
 Terminal=false
 EOF
-update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
 xdg-mime default fivem-url.desktop x-scheme-handler/fivem >/dev/null 2>&1 || true
 info "Handler: ~/.local/bin/fivem-url-handler.sh  (+ fivem-url.desktop)"
+
+# --- desktop launcher icon "FiveM (Linux)" (click to start → menu) -----------
+cat > "$HOME/.local/share/applications/fivem.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=FiveM (Linux)
+Comment=Selbst gebauter FiveM-Client via GE-Proton
+Exec=env RELEASE_DIR=$RELEASE_DIR $SCRIPT_DIR/launch.sh
+Icon=applications-games
+Terminal=false
+Categories=Game;
+EOF
+# also drop it on the desktop, if a Desktop/Schreibtisch folder exists
+for dd in "$HOME/Desktop" "$HOME/Schreibtisch" "$(xdg-user-dir DESKTOP 2>/dev/null)"; do
+  [ -d "$dd" ] && cp -f "$HOME/.local/share/applications/fivem.desktop" "$dd/" 2>/dev/null \
+    && chmod +x "$dd/fivem.desktop" 2>/dev/null
+done
+update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
+info "Icon: „FiveM (Linux)\" im App-Menü (und auf dem Desktop)"
 
 # =============================================================================
 #  FERTIG
@@ -457,8 +478,8 @@ info "Handler: ~/.local/bin/fivem-url-handler.sh  (+ fivem-url.desktop)"
 echo
 echo "${c_bold}${c_grn}✅  Installation abgeschlossen!${c_reset}"
 echo
-echo "   ${c_bold}Starten:${c_reset}"
-echo "     RELEASE_DIR=$RELEASE_DIR $SCRIPT_DIR/launch.sh"
+echo "   ${c_bold}Starten:${c_reset} Klick auf das Icon ${c_bold}„FiveM (Linux)\"${c_reset} (App-Menü / Desktop)"
+echo "     …oder im Terminal:  RELEASE_DIR=$RELEASE_DIR $SCRIPT_DIR/launch.sh"
 echo
 echo "   ${c_bold}Beim Erststart:${c_reset}"
 echo "     • ~2 GB Spieldaten-Cache werden geladen (einmalig)."

@@ -1,8 +1,12 @@
+# EXAMPLE / template only — scripts/install.sh generates the REAL launcher
+# automatically with the correct paths for your machine (into
+# ~/.local/share/applications/fivem.desktop and onto your Desktop).
+# Only edit/use this by hand if you set things up manually; fix the Exec path.
 [Desktop Entry]
 Type=Application
 Name=FiveM (Linux)
-Comment=Selbst gebauter FiveM-Client (Gogsi wine-win10) via GE-Proton
-Exec=/run/media/seltonmt/tb2/FiveM-build/launch.sh
+Comment=Selbst gebauter FiveM-Client via GE-Proton
+Exec=env RELEASE_DIR=%h/FiveM/release %h/fivem-linux/scripts/launch.sh
 Icon=applications-games
 Terminal=false
 Categories=Game;

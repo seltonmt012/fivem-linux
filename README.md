@@ -213,6 +213,7 @@ Viele Server verlangen einen bestimmten **GTA-Build** (z. B. `b3570`). FiveM lä
 | GameProcess startet & schließt sofort | **VC++-Runtime fehlt** → `winetricks -q vcrun2022 vcrun2019` |
 | „Rockstar Games Launcher could not be found" | RGL aus dem Steam-Prefix importieren (Teil B) |
 | Rockstar-Login/Insecure-Box **unsichtbar** | Wine-**Virtual Desktop** aktivieren (Teil B) |
+| **Kein Vollbild / schwarze Ränder** (Spiel klein oben-links) | Virtual-Desktop **auf native Auflösung** setzen (`setup.sh` erkennt das automatisch; sonst `VDESK_RES=1920x1080` setzen). `launch.sh` setzt zusätzlich FiveMs Render-Auflösung + macht das Fenster via `wmctrl` Vollbild. **Wichtig:** vor dem Auflösungs-Fix **alle Wine-Prozesse beenden** (der Wineserver cacht die alte Auflösung) |
 | `FatalError: Unknown component adhesive` (Client) | `adhesive` **nicht** aus dem **Client** entfernen — Wine ersetzt es durch `sticky` |
 | „Could not get resource mounter for … sessionmanager" | **Server**-seitig `svadhesive` aus `components.json` entfernen + `sv_lan 1` ([in-game-Setup](#-so-kommst-du-in-game-lokaler-server)) |
 | Verbindet nur zu eigenem Server, nicht zu öffentlichen | **So gewollt** — öffentliche Server brauchen Windows (siehe Status oben) |

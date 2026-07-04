@@ -8,7 +8,7 @@
 #  Deckt ab:
 #    • Basis-Tools        git curl wget tar python3
 #    • Wine/Proton-Deps   winetricks cabextract p7zip imagemagick
-#    • Fenster-Steuerung  xdotool  + x11-utils (xdpyinfo — von launch.sh genutzt)
+#    • Fenster-Steuerung  xdotool  + x11-utils + wmctrl/xrandr (Fenster/Auflösung — von launch.sh genutzt)
 #    • AppImage/umu       fuse (libfuse2)
 #    • GitHub CLI 'gh'    (für den Cloud-Build) inkl. Login-Check
 #    • 32-bit/multiarch   (Debian/Ubuntu: dpkg --add-architecture i386)
@@ -42,7 +42,7 @@ ${c_bold}install-deps-system.sh${c_reset} — System-Abhängigkeiten für FiveM-
 Verwendung:
   ./scripts/install-deps-system.sh [--help]
 
-Installiert git, curl, wget, tar, python3, winetricks, xdotool, x11-utils,
+Installiert git, curl, wget, tar, python3, winetricks, xdotool, x11-utils, wmctrl, xrandr,
 imagemagick, cabextract, p7zip, fuse und die GitHub CLI 'gh' — passend zu
 deiner Distro (apt / dnf / pacman / zypper). Aktiviert auf Debian/Ubuntu die
 i386-Architektur (multiarch) für Wine/Proton und prüft am Ende 'gh auth status'.
@@ -89,7 +89,7 @@ elif command -v zypper  >/dev/null 2>&1; then PM="zypper"
 else
   warn "Kein unterstützter Paketmanager (apt/dnf/pacman/zypper) gefunden."
   warn "Bitte diese Pakete manuell installieren:"
-  warn "  git curl wget tar python3 winetricks xdotool x11-utils imagemagick"
+  warn "  git curl wget tar python3 winetricks xdotool x11-utils wmctrl xrandr imagemagick"
   warn "  cabextract p7zip fuse  +  GitHub CLI (gh)"
   die  "Automatische Installation nicht möglich — manuell nachholen und erneut starten."
 fi
@@ -104,20 +104,21 @@ YES=""
 # bei apt). Bei apt heisst libfuse2 je nach Version anders -> unten abgefangen.
 case "$PM" in
   apt)
-    PKGS=(git curl wget tar python3 winetricks xdotool x11-utils
+    # wmctrl + x11-xserver-utils(xrandr) needed for auto-fullscreen / native-res detection
+    PKGS=(git curl wget tar python3 winetricks xdotool x11-utils wmctrl x11-xserver-utils
           imagemagick cabextract p7zip-full ca-certificates)
     ;;
   dnf)
-    PKGS=(git curl wget tar python3 winetricks xdotool xorg-x11-utils
+    PKGS=(git curl wget tar python3 winetricks xdotool xorg-x11-utils wmctrl xrandr
           ImageMagick cabextract p7zip p7zip-plugins fuse fuse-libs)
     ;;
   pacman)
     # python -> python3; xorg-xdpyinfo liefert xdpyinfo (aus x11-utils); fuse2 für AppImages
-    PKGS=(git curl wget tar python winetricks xdotool xorg-xdpyinfo
+    PKGS=(git curl wget tar python winetricks xdotool xorg-xdpyinfo wmctrl xorg-xrandr
           imagemagick cabextract p7zip fuse2)
     ;;
   zypper)
-    PKGS=(git curl wget tar python3 winetricks xdotool xdpyinfo
+    PKGS=(git curl wget tar python3 winetricks xdotool xdpyinfo wmctrl xrandr
           ImageMagick cabextract p7zip-full fuse libfuse2)
     ;;
 esac
